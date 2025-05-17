@@ -1,5 +1,6 @@
 from manim import *
 import numpy as np
+from scipy.integrate import odeint
 
 
 class CustomTracedPath(TracedPath):
@@ -39,40 +40,50 @@ class CustomTracedPath(TracedPath):
 
 class ChenLeeCurve(ThreeDScene):
     def construct(self):
+        # Chen-Lee parameters
+        a, b, c = 5.0, 5.0, 28.0
 
-        a, b, c, d = 2, 3, 4, 5
+        # Chen-Lee system of equations
+        def chen_lee(state, t):
+            x, y, z = state
+            dx = a * (x - y)
+            dy = (c - a) * x - x * z + c * y
+            dz = x * y - b * z
+            return [dx, dy, dz]
 
-        def chen_lee(t):
-            x = np.sin(a * t) - np.cos(b * t)
-            y = np.sin(c * t) - np.sin(d * t)
-            z = np.cos(a * t) + np.cos(d * t)
-            return np.array([x, y, z])
+        # Time vector and integration
+        t_vals = np.linspace(0, 50, 2000)
+        initial_state = [1.0, 1.0, 1.0]
+        trajectory = odeint(chen_lee, initial_state, t_vals)
 
-        dot = Dot3D(point=chen_lee(0), color=YELLOW, radius=0.07)
+        scale = 0.05  # Scale down to fit in Manim's coordinate space
 
-        trace = CustomTracedPath(
-            dot.get_center, stroke_color=YELLOW, stroke_width=3, dissipating_time=30
-        )
+        # Create a movable dot at the start of the trajectory (scaled)
+        dot = Dot3D(point=trajectory[0] * scale, color=YELLOW, radius=0.07)
+        trace = CustomTracedPath(dot.get_center, stroke_color=YELLOW, stroke_width=2)
 
-        self.add(dot, trace)
+        axes = ThreeDAxes()
+        self.add(axes, dot, trace)
 
-        t_tracker = ValueTracker(0)
+        index_tracker = ValueTracker(0)
 
-        # Update function to move dot along the Chen-Lee curve
-        def update_dot(mob, dt):
-            t = t_tracker.get_value()
-            t += dt * 0.8  # speed
-            if t > 2 * PI:
-                t = 0  # loop the animation
-            t_tracker.set_value(t)
-            new_pos = chen_lee(t)
-            mob.move_to(new_pos)
+        def update_dot(mob):
+            index = int(index_tracker.get_value())
+            if index < len(trajectory):
+                pos = trajectory[index] * scale
+                mob.move_to(pos)
 
         dot.add_updater(update_dot)
 
-        # Set initial camera angle
+        # Set initial camera angle and rotate slowly
         self.set_camera_orientation(phi=75 * DEGREES, theta=30 * DEGREES)
+        self.begin_ambient_camera_rotation(rate=0.1)
 
-        self.begin_ambient_camera_rotation(rate=0.2, about="phi")
+        # Animate the dot moving along the trajectory
+        self.play(
+            index_tracker.animate.set_value(len(trajectory) - 1),
+            run_time=30,
+            rate_func=linear,
+        )
 
-        self.wait(30)
+        self.wait(1)
