@@ -49,7 +49,7 @@ class ChenLeeAttractor(ThreeDScene):
         dot = Dot3D(point=ORIGIN, radius=0.05, color=YELLOW)
 
         # Store initial parameters explicitly
-        dot.x, dot.y, dot.z = 2, 1, 0
+        dot.x, dot.y, dot.z = 0.1, 0.2, 0.3
         speed = 2.5
         max_bound = 50
         path = CustomTracedPath(
