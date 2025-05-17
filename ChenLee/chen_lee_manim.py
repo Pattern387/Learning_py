@@ -7,9 +7,9 @@ class CustomTracedPath(TracedPath):
         self,
         traced_point_func,
         stroke_width: float = 2,
-        stroke_color=RED,
+        stroke_color=YELLOW,
         dissipating_time=None,
-        **kwargs
+        **kwargs,
     ):
         super().__init__(
             traced_point_func, stroke_width, stroke_color, dissipating_time, **kwargs
@@ -37,37 +37,57 @@ class CustomTracedPath(TracedPath):
         self.time = 1
 
 
-class ChenLeeCurve(ThreeDScene):
+def chen_lee(x, y, z, a=3.0, b=2.7, c=1.7):
+    dx = a * (y - x)
+    dy = (c - a) * x - x * z + c * y
+    dz = x * y - b * z
+    return np.array([dx, dy, dz])
+
+
+class ChenLeeAttractor(ThreeDScene):
     def construct(self):
+        dot = Dot3D(point=ORIGIN, radius=0.05, color=YELLOW)
 
-        a, b, c, d = 2, 3, 4, 5
-
-        # def chen_lee(t):
-        # 这里怎么办啊？？？
-
-        dot = Dot3D(point=chen_lee(0), color=YELLOW, radius=0.07)
-
-        trace = CustomTracedPath(
-            dot.get_center, stroke_color=YELLOW, stroke_width=3, dissipating_time=30
+        # Store initial parameters explicitly
+        dot.x, dot.y, dot.z = 2, 1, 0
+        speed = 2.5
+        max_bound = 50
+        path = CustomTracedPath(
+            dot.get_center,
+            stroke_color=YELLOW,
+            stroke_width=0.93,
+            dissipating_time=5.5,
         )
-
-        self.add(dot, trace)
-
-        t_tracker = ValueTracker(0)
+        self.add(dot, path)
 
         def update_dot(mob, dt):
-            t = t_tracker.get_value()
-            t += dt * 0.8
-            if t > 2 * PI:
-                t = 0
-            t_tracker.set_value(t)
-            new_pos = chen_lee(t)
-            mob.move_to(new_pos)
+            dx, dy, dz = chen_lee(mob.x, mob.y, mob.z)
+
+            # Euler integration
+            mob.x += dx * dt * speed
+            mob.y += dy * dt * speed
+            mob.z += dz * dt * speed
+
+            # Clamp to prevent explosion
+            mob.x = np.clip(mob.x, -max_bound, max_bound)
+            mob.y = np.clip(mob.y, -max_bound, max_bound)
+            mob.z = np.clip(mob.z, -max_bound, max_bound)
+
+            new_pos = np.array([mob.x, mob.y, mob.z])
+
+            # Skip invalid positions
+            if np.any(np.isnan(new_pos)) or np.any(np.isinf(new_pos)):
+                print(f"Invalid position encountered: {new_pos} — skipping frame")
+                return
+
+            scale_factor = 5  # try 5 or 10 for bigger size
+            scaled_pos = new_pos * scale_factor
+            mob.move_to(scaled_pos)
+
+            # DEBUG: Print position every frame
+            print(f"dt={dt:.4f} | Position: {new_pos}")
 
         dot.add_updater(update_dot)
 
-        self.set_camera_orientation(phi=75 * DEGREES, theta=30 * DEGREES)
-
-        self.begin_ambient_camera_rotation(rate=0.2, about="phi")
-
-        self.wait(30)
+        self.set_camera_orientation(phi=75 * DEGREES, theta=45 * DEGREES)
+        self.wait(15)
