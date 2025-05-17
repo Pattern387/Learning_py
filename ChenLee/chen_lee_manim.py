@@ -1,112 +1,78 @@
 from manim import *
-
-"""
-定义Chen-Lee吸引子曲线类
-"""
+import numpy as np
 
 
-class ChenLeeAttractorCurve(VMobject):
-    """
-    a,b,c为吸引子参数
-    delta: dt
-    idle_time: 迭代空跑步数，用于初始化不同时间点
-    dissipating_time: 路径保持时间
-    """
-
+class CustomTracedPath(TracedPath):
     def __init__(
-        self, position, color, scale, a, b, c, delta, idle_time, dissipating_time
+        self,
+        traced_point_func,
+        stroke_width: float = 2,
+        stroke_color=RED,
+        dissipating_time=None,
+        **kwargs
     ):
-        super().__init__()
-        self.position = position
-        self.scale = scale
-        self.a = a
-        self.b = b
-        self.c = c
-        self.delta = delta
-        self.idle_time = idle_time
-        self.init()
-        self.dot = Dot(point=position, radius=0.035, color=color)
-        self.path = TracedPath(
-            self.dot.get_center,
-            dissipating_time=dissipating_time,
-            stroke_width=0.5,
-            stroke_color=color,
+        super().__init__(
+            traced_point_func, stroke_width, stroke_color, dissipating_time, **kwargs
         )
+        self.trace_enable = True
+        self.time = 0
 
-    def chen_lee_attractor(self):
-        x, y, z = self.position
+    def update_path(self, mob, dt):
+        if self.trace_enable:
+            new_point = self.traced_point_func()
+            if not self.has_points():
+                self.start_new_path(new_point)
+            self.add_line_to(new_point)
+        if self.dissipating_time:
+            self.time += dt
+            if self.time - 1 > self.dissipating_time:
+                nppcc = self.n_points_per_curve
+                self.set_points(self.points[nppcc:])
 
-        # Chen-Lee系统方程
-        dx = (self.a * (y - x)) * self.delta
-        dy = ((self.c - self.a) * x - x * z + self.c * y) * self.delta
-        dz = (x * y - self.b * z) * self.delta
+    def stop_trace(self):
+        self.trace_enable = False
 
-        x += dx
-        y += dy
-        z += dz
-
-        return [x, y, z]
-
-    def init(self):
-        # 空跑迭代，跳过初始瞬态
-        for _ in range(self.idle_time):
-            self.position = self.chen_lee_attractor()
-
-    def get_scale_point(self, x, y, z):
-        # 适当缩放和平移，方便显示
-        return np.array([x / self.scale, y / self.scale, z / self.scale - 3])
-
-    def add_point(self):
-        self.position = self.chen_lee_attractor()
-        scaled_point = self.get_scale_point(*self.position)
-        self.dot.move_to(scaled_point)
+    def start_trace(self):
+        self.trace_enable = True
+        self.time = 1
 
 
-"""
-Chen-Lee吸引子场景示例，单个粒子
-"""
-
-
-class ChenLeeAttractorScene(ThreeDScene):
+class ChenLeeCurve(ThreeDScene):
     def construct(self):
-        attractor_eq = (
-            MathTex(
-                r"\text{Chen-Lee Attractor} = \begin{cases}"
-                r"\frac{dx}{dt} = a(y-x) \\"
-                r"\frac{dy}{dt} = (c-a)x - xz + cy \\"
-                r"\frac{dz}{dt} = xy - bz"
-                r"\end{cases} (a=5, b=3, c=28)"
-            )
-            .scale(0.6)
-            .to_edge(DOWN)
+
+        a, b, c, d = 2, 3, 4, 5
+
+        def chen_lee(t):
+            x = np.sin(a * t) - np.cos(b * t)
+            y = np.sin(c * t) - np.sin(d * t)
+            z = np.cos(a * t) + np.cos(d * t)
+            return np.array([x, y, z])
+
+        dot = Dot3D(point=chen_lee(0), color=YELLOW, radius=0.07)
+
+        trace = CustomTracedPath(
+            dot.get_center, stroke_color=YELLOW, stroke_width=3, dissipating_time=30
         )
 
-        self.play(Create(attractor_eq), run_time=4)
-        self.add_fixed_in_frame_mobjects(attractor_eq)
+        self.add(dot, trace)
 
-        # 初始化单个Chen-Lee吸引子粒子
-        curve = ChenLeeAttractorCurve(
-            position=[1, 1, 1],
-            color=BLUE,
-            scale=10,
-            a=5,
-            b=3,
-            c=28,
-            delta=0.01,
-            idle_time=100,
-            dissipating_time=5,
-        )
-        self.add(curve, curve.dot, curve.path)
+        t_tracker = ValueTracker(0)
 
+        # Update function to move dot along the Chen-Lee curve
         def update_dot(mob, dt):
-            mob.add_point()
+            t = t_tracker.get_value()
+            t += dt * 0.8  # speed
+            if t > 2 * PI:
+                t = 0  # loop the animation
+            t_tracker.set_value(t)
+            new_pos = chen_lee(t)
+            mob.move_to(new_pos)
 
-        curve.add_updater(update_dot)
+        dot.add_updater(update_dot)
 
-        self.set_camera_orientation(phi=75 * DEGREES, theta=120 * DEGREES)
-        self.begin_ambient_camera_rotation(rate=0.2, about="theta")
+        # Set initial camera angle
+        self.set_camera_orientation(phi=75 * DEGREES, theta=30 * DEGREES)
+
+        self.begin_ambient_camera_rotation(rate=0.2, about="phi")
+
         self.wait(30)
-        self.stop_ambient_camera_rotation()
-
-        curve.clear_updaters()
-        self.play(FadeOut(curve.dot), FadeOut(curve.path), run_time=3)
