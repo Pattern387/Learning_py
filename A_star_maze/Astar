@@ -1,0 +1,74 @@
+import heapq
+
+
+def heuristic(a, b):  # calculate the distance bettween the start and end by h and l
+    # Manhattan distance
+    return abs(a[0] - b[0]) + abs(a[1] - b[1])
+
+
+def a_star_search(maze, start, goal):
+    open_set = []
+    heapq.heappush(open_set, (0, start))
+    came_from = {}
+    g_score = {start: 0}
+
+    while open_set:
+        _, current = heapq.heappop(open_set)
+
+        if current == goal:
+            path = []
+            while current in came_from:
+                path.append(current)
+                current = came_from[current]
+            path.reverse()
+            return path
+
+        for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, 1)]:  # Up, down, left, right
+            neighbor = (current[0] + dx, current[1] + dy)
+            if (
+                0 <= neighbor[0] < len(maze)
+                and 0 <= neighbor[1] < len(maze[0])
+                and maze[neighbor[0]][neighbor[1]] != "#"
+            ):
+
+                tentative_g_score = g_score[current] + 1
+                if neighbor not in g_score or tentative_g_score < g_score[neighbor]:
+                    g_score[neighbor] = tentative_g_score
+                    f_score = tentative_g_score + heuristic(neighbor, goal)
+                    heapq.heappush(open_set, (f_score, neighbor))
+                    came_from[neighbor] = current
+
+    return None  # No path found
+
+
+def find_positions(maze):  # find the start and goal in the maze
+    start = goal = None
+    for i, row in enumerate(maze):
+        for j, value in enumerate(row):
+            if value == "A":
+                start = (i, j)
+            elif value == "B":
+                goal = (i, j)
+    return start, goal
+
+
+def print_maze_with_path(maze, path):  # print solution
+    maze_copy = [list(row) for row in maze]
+    for x, y in path:
+        if maze_copy[x][y] == " ":
+            maze_copy[x][y] = "."
+    for row in maze_copy:
+        print("".join(row))
+
+
+# Sample maze
+maze = ["##########", "#A  #   B#", "# # # # ##", "# #   #  #", "##########"]
+
+start, goal = find_positions(maze)
+path = a_star_search(maze, start, goal)
+
+if path:
+    print("Path found:")
+    print_maze_with_path(maze, path)
+else:
+    print("No path found.")
