@@ -1,2 +1,0 @@
-# This file is used internally by FFMPEG.
-file 'file:C:/Users/gokuc/Desktop/py/ChenLee/media/videos/chen_lee_manim/480p15/partial_movie_files/ChenLeeAttractor/1908118877_3073934414_3310467921.mp4'

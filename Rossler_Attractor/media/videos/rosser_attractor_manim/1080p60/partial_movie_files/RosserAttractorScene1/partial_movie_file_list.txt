@@ -1,0 +1,4 @@
+# This file is used internally by FFMPEG.
+file 'file:C:/Users/gokuc/Desktop/py/Rossler_Attractor/media/videos/rosser_attractor_manim/1080p60/partial_movie_files/RosserAttractorScene1/3272876394_2153752082_223132457.mp4'
+file 'file:C:/Users/gokuc/Desktop/py/Rossler_Attractor/media/videos/rosser_attractor_manim/1080p60/partial_movie_files/RosserAttractorScene1/3321215346_2399014858_108564580.mp4'
+file 'file:C:/Users/gokuc/Desktop/py/Rossler_Attractor/media/videos/rosser_attractor_manim/1080p60/partial_movie_files/RosserAttractorScene1/4070681524_2528793604_3557062109.mp4'
